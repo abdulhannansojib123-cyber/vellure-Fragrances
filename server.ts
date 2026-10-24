@@ -730,10 +730,22 @@ app.get(['/', '/product/:slug', '/shop', '/combo', '/cart'], (req: Request, res:
 
 // 1. Admin Authentication
 app.post('/api/admin/login', (req, res) => {
-  const { password } = req.body;
-  const configuredPassword = process.env.ADMIN_PASSWORD || 'Kr100300500';
+  const { password } = req.body || {};
+  const configuredPassword = process.env.ADMIN_PASSWORD;
 
-  if (!password || password !== configuredPassword) {
+  // No built-in fallback password: admin login stays disabled until ADMIN_PASSWORD is set.
+  if (!configuredPassword) {
+    console.error('[Admin Login] ADMIN_PASSWORD is not set. Admin login is disabled.');
+    return res.status(503).json({ success: false, error: 'Admin login is not configured on the server' });
+  }
+
+  // Constant-time comparison (hash both sides so the buffers are always equal length)
+  const sha = (value: string) => crypto.createHash('sha256').update(value).digest();
+  if (
+    typeof password !== 'string' ||
+    !password ||
+    !crypto.timingSafeEqual(sha(password), sha(configuredPassword))
+  ) {
     return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
   }
 
