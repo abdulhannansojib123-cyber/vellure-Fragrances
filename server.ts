@@ -101,7 +101,7 @@ function getDefaultData(): StoreData {
             productId: 'prod-1',
             name: 'Oud Al Khaleej',
             nameBn: 'উদ আল খালিজ',
-            image: '/src/assets/images/product_oud_al_khaleej_1790357142489.jpg',
+            image: '/src/assets/images/product_vellure_royal_oud_1.jpg',
             size: '6ml',
             price: 1350,
             quantity: 1
@@ -110,7 +110,7 @@ function getDefaultData(): StoreData {
             productId: 'prod-2',
             name: 'Arabian Musk',
             nameBn: 'অ্যারাবিয়ান মাস্ক',
-            image: '/src/assets/images/product_arabian_musk_1790357154972.jpg',
+            image: '/src/assets/images/product_vellure_musk_safi_1.jpg',
             size: '3ml',
             price: 580,
             quantity: 1
@@ -161,7 +161,7 @@ function getDefaultData(): StoreData {
             productId: 'prod-4',
             name: 'Amber Oud',
             nameBn: 'অ্যাম্বার উদ',
-            image: '/src/assets/images/product_amber_oud_1790357176335.jpg',
+            image: '/src/assets/images/product_vellure_royal_sandal_official.jpg',
             size: '6ml',
             price: 1290,
             quantity: 1
@@ -480,7 +480,7 @@ app.post('/api/products', requireAdminAuth, (req, res) => {
 
   const rawImages: string[] = Array.isArray(newProduct.images)
     ? newProduct.images
-    : (newProduct.images ? [newProduct.images] : ['/src/assets/images/product_oud_al_khaleej_1790357142489.jpg']);
+    : (newProduct.images ? [newProduct.images] : ['/src/assets/images/product_vellure_royal_oud_1.jpg']);
 
   const processedImages = rawImages
     .filter(Boolean)
@@ -492,7 +492,7 @@ app.post('/api/products', requireAdminAuth, (req, res) => {
     slug: newProduct.slug || slug,
     rating: newProduct.rating || 5.0,
     reviewsCount: newProduct.reviewsCount || 0,
-    images: processedImages.length > 0 ? processedImages : ['/src/assets/images/product_oud_al_khaleej_1790357142489.jpg']
+    images: processedImages.length > 0 ? processedImages : ['/src/assets/images/product_vellure_royal_oud_1.jpg']
   };
 
   data.products.unshift(product);
@@ -1465,6 +1465,8 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.resolve(process.cwd(), 'dist');
+    // Vite fingerprints files in /assets, so they can be cached for a year
+    app.use('/assets', express.static(path.join(distPath, 'assets'), { maxAge: '1y', immutable: true }));
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));

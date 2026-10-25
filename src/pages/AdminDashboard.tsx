@@ -48,20 +48,15 @@ import {
 import { resolveImage } from '../utils/resolveImage';
 
 const PRESET_GALLERY_IMAGES_RAW = [
-  { name: 'Oud Al Khaleej', url: '/src/assets/images/product_oud_al_khaleej_1790357142489.jpg' },
-  { name: 'Dark Knight', url: '/src/assets/images/product_dark_knight_1790357165463.jpg' },
-  { name: 'Amber Oud', url: '/src/assets/images/product_amber_oud_1790357176335.jpg' },
-  { name: 'Velvet Rose', url: '/src/assets/images/product_velvet_rose_1790357187126.jpg' },
-  { name: 'Royal Leather', url: '/src/assets/images/product_royal_leather_1790357199464.jpg' },
   { name: 'Royal Sandal 6ml Flacon', url: '/src/assets/images/product_vellure_royal_sandal_6ml_official.jpg' },
   { name: 'VELLURE Royal Sandal 3ml', url: '/src/assets/images/product_vellure_royal_sandal_official.jpg' },
-  { name: 'Royal Sandal Portrait Reserve', url: '/src/assets/images/product_vellure_royal_sandal_portrait.png' },
+  { name: 'Royal Sandal Portrait Reserve', url: '/src/assets/images/product_vellure_royal_sandal_portrait.jpg' },
   { name: 'Vellure White Chandan 6ml', url: '/src/assets/images/product_vellure_white_chandan_6ml_official.jpg' },
   { name: 'Vellure White Chandan 3ml', url: '/src/assets/images/product_vellure_white_chandan_official.jpg' },
-  { name: 'Vellure White Chandan Portrait', url: '/src/assets/images/product_vellure_white_chandan_portrait.png' },
-  { name: 'Vellure Blue De Chanel Flacon 1', url: '/src/assets/images/product_vellure_blue_de_chanel_1.png' },
-  { name: 'Vellure Blue De Chanel 6ml', url: '/src/assets/images/product_vellure_blue_de_chanel_6ml.png' },
-  { name: 'Vellure Blue De Chanel Flacon 3', url: '/src/assets/images/product_vellure_blue_de_chanel_3.png' },
+  { name: 'Vellure White Chandan Portrait', url: '/src/assets/images/product_vellure_white_chandan_portrait.jpg' },
+  { name: 'Vellure Blue De Chanel Flacon 1', url: '/src/assets/images/product_vellure_blue_de_chanel_1.jpg' },
+  { name: 'Vellure Blue De Chanel 6ml', url: '/src/assets/images/product_vellure_blue_de_chanel_6ml.jpg' },
+  { name: 'Vellure Blue De Chanel Flacon 3', url: '/src/assets/images/product_vellure_blue_de_chanel_3.jpg' },
   { name: 'Vellure Armani Blue 3ml / Flacon 1', url: '/src/assets/images/product_vellure_armani_blue_1.jpg' },
   { name: 'Vellure Armani Blue 6ml', url: '/src/assets/images/product_vellure_armani_blue_6ml.jpg' },
   { name: 'Vellure Armani Blue Flacon 3', url: '/src/assets/images/product_vellure_armani_blue_3.jpg' },
@@ -71,9 +66,9 @@ const PRESET_GALLERY_IMAGES_RAW = [
   { name: 'Vellure Acqua Digio 3ml / Flacon 1', url: '/src/assets/images/product_vellure_acqua_digio_1.jpg' },
   { name: 'Vellure Acqua Digio 6ml', url: '/src/assets/images/product_vellure_acqua_digio_6ml.jpg' },
   { name: 'Vellure Acqua Digio Flacon 3', url: '/src/assets/images/product_vellure_acqua_digio_3.jpg' },
-  { name: 'Vellure Bombshell 3ml / Flacon 1', url: '/src/assets/images/product_vellure_bombshell_1.png' },
-  { name: 'Vellure Bombshell 6ml', url: '/src/assets/images/product_vellure_bombshell_2.png' },
-  { name: 'Vellure Bombshell Flacon 3', url: '/src/assets/images/product_vellure_bombshell_3.png' },
+  { name: 'Vellure Bombshell 3ml / Flacon 1', url: '/src/assets/images/product_vellure_bombshell_1.jpg' },
+  { name: 'Vellure Bombshell 6ml', url: '/src/assets/images/product_vellure_bombshell_2.jpg' },
+  { name: 'Vellure Bombshell Flacon 3', url: '/src/assets/images/product_vellure_bombshell_3.jpg' },
   { name: 'Vellure Vampire Blood 3ml / Flacon 1', url: '/src/assets/images/product_vellure_vampire_blood_1.jpg' },
   { name: 'Vellure Vampire Blood 6ml', url: '/src/assets/images/product_vellure_vampire_blood_2.jpg' },
   { name: 'Vellure Vampire Blood Flacon 3', url: '/src/assets/images/product_vellure_vampire_blood_3.jpg' },
@@ -93,14 +88,11 @@ const PRESET_GALLERY_IMAGES_RAW = [
   { name: 'Vellure Saffron Rose 6ml', url: '/src/assets/images/product_vellure_saffron_rose_2.jpg' },
   { name: 'Vellure Saffron Rose Flacon 3', url: '/src/assets/images/product_vellure_saffron_rose_3.jpg' },
   { name: 'Vellure Royal Oud 3ml / Flacon 1', url: '/src/assets/images/product_vellure_royal_oud_1.jpg' },
-  { name: 'Vellure Royal Oud 6ml', url: '/src/assets/images/product_vellure_royal_oud_2.png' },
+  { name: 'Vellure Royal Oud 6ml', url: '/src/assets/images/product_vellure_royal_oud_2.jpg' },
   { name: 'Vellure Royal Oud Flacon 3', url: '/src/assets/images/product_vellure_royal_oud_3.jpg' },
-  { name: 'Vellure Baccarat Rouge 3ml / Flacon 1', url: '/src/assets/images/product_vellure_baccarat_rouge_1.png' },
-  { name: 'Vellure Baccarat Rouge 6ml', url: '/src/assets/images/product_vellure_baccarat_rouge_2.png' },
-  { name: 'Vellure Baccarat Rouge Flacon 3', url: '/src/assets/images/product_vellure_baccarat_rouge_3.png' },
-  { name: 'Imperial Sandalwood', url: '/src/assets/images/product_vellure_royal_sandal_1790802312562.jpg' },
-  { name: 'Musk Supreme', url: '/src/assets/images/product_musk_supreme_1790357220268.jpg' },
-  { name: 'Golden Amber Bottle', url: '/src/assets/images/fragrance_bottle_feature_1790357242137.jpg' }
+  { name: 'Vellure Baccarat Rouge 3ml / Flacon 1', url: '/src/assets/images/product_vellure_baccarat_rouge_1.jpg' },
+  { name: 'Vellure Baccarat Rouge 6ml', url: '/src/assets/images/product_vellure_baccarat_rouge_2.jpg' },
+  { name: 'Vellure Baccarat Rouge Flacon 3', url: '/src/assets/images/product_vellure_baccarat_rouge_3.jpg' }
 ];
 
 const PRESET_GALLERY_IMAGES = PRESET_GALLERY_IMAGES_RAW.map(item => ({
@@ -191,7 +183,7 @@ export const AdminDashboard: React.FC = () => {
     topNotes: 'Persian Saffron, Bergamot',
     heartNotes: 'Agarwood, Damask Rose',
     baseNotes: 'Smoky Amber, Mysore Sandalwood',
-    images: '/src/assets/images/product_oud_al_khaleej_1790357142489.jpg',
+    images: '/src/assets/images/product_vellure_royal_oud_1.jpg',
     galleryImages: [] as string[],
     seasons: ['All-Season'] as string[],
     bestWeather: '',
@@ -798,7 +790,7 @@ export const AdminDashboard: React.FC = () => {
         base: productForm.baseNotes.split(',').map((s) => s.trim())
       },
       images: Array.from(new Set([
-        (productForm.images || '').trim() || '/src/assets/images/product_oud_al_khaleej_1790357142489.jpg',
+        (productForm.images || '').trim() || '/src/assets/images/product_vellure_royal_oud_1.jpg',
         ...(productForm.galleryImages || []).map((img) => img.trim()).filter((img) => img.length > 0)
       ])),
       seasons: productForm.seasons && productForm.seasons.length > 0 ? productForm.seasons : ['All-Season'],
@@ -1826,7 +1818,7 @@ export const AdminDashboard: React.FC = () => {
                           <td className="py-3.5 px-4">
                             <div className="flex items-center gap-3">
                               <img
-                                src={prod.images[0] || '/src/assets/images/product_oud_al_khaleej_1790357142489.jpg'}
+                                src={prod.images[0] || '/src/assets/images/product_vellure_royal_oud_1.jpg'}
                                 alt={prod.name}
                                 className="w-11 h-11 rounded-lg object-cover border border-[#2D2B35] shrink-0"
                               />
@@ -2600,7 +2592,7 @@ export const AdminDashboard: React.FC = () => {
                           alt="Product preview"
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/src/assets/images/product_oud_al_khaleej_1790357142489.jpg';
+                            (e.target as HTMLImageElement).src = '/src/assets/images/product_vellure_royal_oud_1.jpg';
                           }}
                         />
                       ) : (
@@ -2717,7 +2709,7 @@ export const AdminDashboard: React.FC = () => {
                             alt={`Gallery ${gIdx + 1}`}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/src/assets/images/product_oud_al_khaleej_1790357142489.jpg';
+                              (e.target as HTMLImageElement).src = '/src/assets/images/product_vellure_royal_oud_1.jpg';
                             }}
                           />
                           <span className="absolute top-1.5 left-1.5 bg-black/80 text-[9px] font-mono text-[#D4AF37] px-1.5 py-0.5 rounded">

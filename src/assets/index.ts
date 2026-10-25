@@ -2,19 +2,15 @@ import heroCover1 from './images/hero_vellure_cover_1.jpg';
 import heroCover2 from './images/hero_vellure_cover_2.jpg';
 import heroCover3 from './images/hero_vellure_cover_3.jpg';
 import brandLogo from './images/vellure_brand_logo_1790543670978.jpg';
-import productOudAlKhaleej from './images/product_oud_al_khaleej_1790357142489.jpg';
-import productArabianMusk from './images/product_arabian_musk_1790357154972.jpg';
-import productDarkKnight from './images/product_dark_knight_1790357165463.jpg';
-import productAmberOud from './images/product_amber_oud_1790357176335.jpg';
 import productRoyalSandal from './images/product_vellure_royal_sandal_official.jpg';
-import productRoyalSandalPortrait from './images/product_vellure_royal_sandal_portrait.png';
+import productRoyalSandalPortrait from './images/product_vellure_royal_sandal_portrait.jpg';
 import productWhiteChandan from './images/product_vellure_white_chandan_official.jpg';
 import productWhiteChandan6ml from './images/product_vellure_white_chandan_6ml_official.jpg';
-import productWhiteChandanPortrait from './images/product_vellure_white_chandan_portrait.png';
+import productWhiteChandanPortrait from './images/product_vellure_white_chandan_portrait.jpg';
 import productSandal6ml from './images/product_vellure_royal_sandal_6ml_official.jpg';
-import productBlueDeChanel1 from './images/product_vellure_blue_de_chanel_1.png';
-import productBlueDeChanel2 from './images/product_vellure_blue_de_chanel_6ml.png';
-import productBlueDeChanel3 from './images/product_vellure_blue_de_chanel_3.png';
+import productBlueDeChanel1 from './images/product_vellure_blue_de_chanel_1.jpg';
+import productBlueDeChanel2 from './images/product_vellure_blue_de_chanel_6ml.jpg';
+import productBlueDeChanel3 from './images/product_vellure_blue_de_chanel_3.jpg';
 import productArmaniBlue1 from './images/product_vellure_armani_blue_1.jpg';
 import productArmaniBlue2 from './images/product_vellure_armani_blue_6ml.jpg';
 import productArmaniBlue3 from './images/product_vellure_armani_blue_3.jpg';
@@ -25,9 +21,9 @@ import productAcquaDigio1 from './images/product_vellure_acqua_digio_1.jpg';
 import productAcquaDigio2 from './images/product_vellure_acqua_digio_6ml.jpg';
 import productAcquaDigio3 from './images/product_vellure_acqua_digio_3.jpg';
 
-import productBombshell1 from './images/product_vellure_bombshell_1.png';
-import productBombshell2 from './images/product_vellure_bombshell_2.png';
-import productBombshell3 from './images/product_vellure_bombshell_3.png';
+import productBombshell1 from './images/product_vellure_bombshell_1.jpg';
+import productBombshell2 from './images/product_vellure_bombshell_2.jpg';
+import productBombshell3 from './images/product_vellure_bombshell_3.jpg';
 
 import productVampireBlood1 from './images/product_vellure_vampire_blood_1.jpg';
 import productVampireBlood2 from './images/product_vellure_vampire_blood_2.jpg';
@@ -54,12 +50,12 @@ import productSaffronRose2 from './images/product_vellure_saffron_rose_2.jpg';
 import productSaffronRose3 from './images/product_vellure_saffron_rose_3.jpg';
 
 import productRoyalOud1 from './images/product_vellure_royal_oud_1.jpg';
-import productRoyalOud2 from './images/product_vellure_royal_oud_2.png';
+import productRoyalOud2 from './images/product_vellure_royal_oud_2.jpg';
 import productRoyalOud3 from './images/product_vellure_royal_oud_3.jpg';
 
-import productBaccaratRouge1 from './images/product_vellure_baccarat_rouge_1.png';
-import productBaccaratRouge2 from './images/product_vellure_baccarat_rouge_2.png';
-import productBaccaratRouge3 from './images/product_vellure_baccarat_rouge_3.png';
+import productBaccaratRouge1 from './images/product_vellure_baccarat_rouge_1.jpg';
+import productBaccaratRouge2 from './images/product_vellure_baccarat_rouge_2.jpg';
+import productBaccaratRouge3 from './images/product_vellure_baccarat_rouge_3.jpg';
 
 import comboDiscoveryBox1 from './images/combo_discovery_box_1.jpg';
 import comboDiscoveryBox2 from './images/combo_discovery_box_2.jpg';
@@ -83,10 +79,6 @@ export const ASSET_IMAGES = {
   hero1: heroCover1,
   hero2: heroCover2,
   hero3: heroCover3,
-  oudAlKhaleej: productOudAlKhaleej,
-  arabianMusk: productArabianMusk,
-  darkKnight: productDarkKnight,
-  amberOud: productAmberOud,
   royalSandal: productRoyalSandal,
   royalSandal6ml: productSandal6ml,
   royalSandalPortrait: productRoyalSandalPortrait,

@@ -101,9 +101,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     "rating": 4.9,
     "reviewsCount": 68,
     "images": [
-      "/src/assets/images/product_vellure_blue_de_chanel_1.png",
-      "/src/assets/images/product_vellure_blue_de_chanel_6ml.png",
-      "/src/assets/images/product_vellure_blue_de_chanel_3.png"
+      "/src/assets/images/product_vellure_blue_de_chanel_1.jpg",
+      "/src/assets/images/product_vellure_blue_de_chanel_6ml.jpg",
+      "/src/assets/images/product_vellure_blue_de_chanel_3.jpg"
     ],
     "notes": {
       "top": [
@@ -183,7 +183,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     "images": [
       "/src/assets/images/product_vellure_royal_sandal_official.jpg",
       "/src/assets/images/product_vellure_royal_sandal_6ml_official.jpg",
-      "/src/assets/images/product_vellure_royal_sandal_portrait.png"
+      "/src/assets/images/product_vellure_royal_sandal_portrait.jpg"
     ],
     "notes": {
       "top": [
@@ -250,7 +250,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     "images": [
       "/src/assets/images/product_vellure_white_chandan_official.jpg",
       "/src/assets/images/product_vellure_white_chandan_6ml_official.jpg",
-      "/src/assets/images/product_vellure_white_chandan_portrait.png"
+      "/src/assets/images/product_vellure_white_chandan_portrait.jpg"
     ],
     "notes": {
       "top": [
@@ -541,7 +541,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     "reviewsCount": 135,
     "images": [
       "/src/assets/images/product_vellure_royal_oud_1.jpg",
-      "/src/assets/images/product_vellure_royal_oud_2.png",
+      "/src/assets/images/product_vellure_royal_oud_2.jpg",
       "/src/assets/images/product_vellure_royal_oud_3.jpg"
     ],
     "notes": {
@@ -1272,9 +1272,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     "rating": 4.9,
     "reviewsCount": 74,
     "images": [
-      "/src/assets/images/product_vellure_bombshell_1.png",
-      "/src/assets/images/product_vellure_bombshell_2.png",
-      "/src/assets/images/product_vellure_bombshell_3.png"
+      "/src/assets/images/product_vellure_bombshell_1.jpg",
+      "/src/assets/images/product_vellure_bombshell_2.jpg",
+      "/src/assets/images/product_vellure_bombshell_3.jpg"
     ],
     "notes": {
       "top": [
@@ -1345,9 +1345,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     "rating": 5,
     "reviewsCount": 96,
     "images": [
-      "/src/assets/images/product_vellure_baccarat_rouge_1.png",
-      "/src/assets/images/product_vellure_baccarat_rouge_2.png",
-      "/src/assets/images/product_vellure_baccarat_rouge_3.png"
+      "/src/assets/images/product_vellure_baccarat_rouge_1.jpg",
+      "/src/assets/images/product_vellure_baccarat_rouge_2.jpg",
+      "/src/assets/images/product_vellure_baccarat_rouge_3.jpg"
     ],
     "notes": {
       "top": [
