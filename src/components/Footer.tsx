@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { Logo } from './Logo';
-import { Mail, Phone, MapPin, Compass, Shield, Facebook, Instagram, Download } from 'lucide-react';
+import { Mail, Phone, MapPin, Compass, Facebook, Instagram } from 'lucide-react';
 import { PaymentBadges } from './PaymentLogos';
 
 export const Footer: React.FC = () => {
@@ -157,26 +157,6 @@ export const Footer: React.FC = () => {
                 <button onClick={() => navigateTo('contact')} className="hover:text-[#D4AF37] transition-colors">
                   {language === 'bn' ? 'শর্তাবলী' : 'Terms & Conditions'}
                 </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => navigateTo('admin')}
-                  className="hover:text-[#D4AF37] transition-colors flex items-center gap-1 text-[#8C8880]"
-                >
-                  <Shield className="w-3 h-3" />
-                  <span>{t('admin')}</span>
-                </button>
-              </li>
-              <li>
-                <a
-                  href="/api/download-zip"
-                  download="vellure-luxury-fragrance.zip"
-                  className="hover:text-[#D4AF37] transition-colors flex items-center gap-1 text-[#8C8880]"
-                  title="Download complete project source code ZIP for GitHub"
-                >
-                  <Download className="w-3 h-3 text-[#D4AF37]" />
-                  <span>{language === 'bn' ? 'সোর্স কোড ডাউনলোড (.ZIP)' : 'Download Source (.ZIP)'}</span>
-                </a>
               </li>
             </ul>
           </div>

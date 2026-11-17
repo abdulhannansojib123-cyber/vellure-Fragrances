@@ -5,7 +5,6 @@ import { GoogleSheetsInventoryPanel } from '../components/GoogleSheetsInventoryP
 import { Product, Order, OrderStatus, SiteSettings, Coupon } from '../types';
 import { formatBDT } from '../utils/translations';
 import { getEventCount, getAnalyticsEvents, AnalyticsEvent } from '../utils/analytics';
-import { sendClientTelegramMessage, saveTelegramCredentials } from '../utils/telegram';
 import {
   Shield,
   Lock,
@@ -209,14 +208,6 @@ export const AdminDashboard: React.FC = () => {
     setTestingTelegram(true);
     setTelegramTestResult(null);
 
-    const testMsg = `🧪 <b>VELLURE Atelier — Bot Verification</b>\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `✅ <b>Status:</b> Telegram Bot Connected Successfully!\n` +
-      `🕒 <b>Verified At:</b> ${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}\n` +
-      `🚀 <b>Capabilities:</b> Real-time Add-to-Cart & New Order Dispatches Active.\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `<i>Your VELLURE fragrance store is ready to send instant alerts!</i>`;
-
     try {
       let testedOk = false;
       let errMsg = '';
@@ -224,7 +215,7 @@ export const AdminDashboard: React.FC = () => {
       try {
         const res = await fetch('/api/notifications/telegram/test', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
           body: JSON.stringify({
             botToken: settingsForm.telegramBotToken,
             chatId: settingsForm.telegramChatId
@@ -237,20 +228,7 @@ export const AdminDashboard: React.FC = () => {
           errMsg = data.error || '';
         }
       } catch {
-        // server endpoint offline, fallback to direct browser dispatch
-      }
-
-      if (!testedOk) {
-        const directRes = await sendClientTelegramMessage(
-          testMsg,
-          settingsForm.telegramBotToken,
-          settingsForm.telegramChatId
-        );
-        if (directRes.success) {
-          testedOk = true;
-        } else {
-          errMsg = directRes.error || errMsg || 'Failed to send test notification. Check token & chat ID.';
-        }
+        errMsg = 'Could not reach the server.';
       }
 
       if (testedOk) {
@@ -844,14 +822,6 @@ export const AdminDashboard: React.FC = () => {
     setSavingSettings(true);
     setSettingsSuccess(false);
     try {
-      // Always persist locally first so client and static deployments keep settings
-      try {
-        localStorage.setItem('vellure_settings', JSON.stringify(settingsForm));
-        if (settingsForm.telegramBotToken) {
-          saveTelegramCredentials(settingsForm.telegramBotToken, settingsForm.telegramChatId || '');
-        }
-      } catch {}
-
       const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: {
@@ -2283,10 +2253,16 @@ export const AdminDashboard: React.FC = () => {
                 <input
                   type="password"
                   value={settingsForm.telegramBotToken || ''}
+                  onFocus={() => {
+                    // The stored token is never sent to the browser; clear the masked hint so a new one can be typed
+                    if ((settingsForm.telegramBotToken || '').startsWith('••')) {
+                      setSettingsForm({ ...settingsForm, telegramBotToken: '' });
+                    }
+                  }}
                   onChange={(e) =>
                     setSettingsForm({ ...settingsForm, telegramBotToken: e.target.value })
                   }
-                  placeholder="e.g. 7123456789:AAHkL789..."
+                  placeholder={settingsForm.telegramBotTokenSet ? 'Saved on server — type a new token to replace it' : 'e.g. 7123456789:AAHkL789...'}
                   className="w-full bg-[#18171D] border border-[#2B2932] px-3 py-2 rounded-lg text-white font-mono focus:outline-none focus:border-[#D4AF37]"
                 />
               </div>

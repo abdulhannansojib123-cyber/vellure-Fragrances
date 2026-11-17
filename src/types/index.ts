@@ -141,6 +141,7 @@ export interface SiteSettings {
   announcementBg?: string;
   announcementSpeed?: 'slow' | 'relaxed' | 'normal';
   telegramBotToken?: string;
+  telegramBotTokenSet?: boolean;
   telegramChatId?: string;
   telegramNotifyAddToCart?: boolean;
   telegramNotifyNewOrder?: boolean;

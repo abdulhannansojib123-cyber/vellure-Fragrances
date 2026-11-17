@@ -40,3 +40,6 @@ lerna-debug.log*
 .cache/
 .temp/
 *.tmp
+
+# Runtime data: orders, customer phone numbers/addresses, settings and uploads. Never commit.
+data/

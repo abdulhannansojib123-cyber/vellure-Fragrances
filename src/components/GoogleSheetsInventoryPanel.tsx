@@ -47,14 +47,22 @@ export const GoogleSheetsInventoryPanel: React.FC = () => {
   const [sheetInput, setSheetInput] = useState(
     settings.googleSheetId ||
     settings.googleSheetWebhookUrl ||
-    'https://script.google.com/macros/s/AKfycbyi2tSRCnHp2SV1XTMorD9miR0rV3CN1HPvVgCQeWOxNwDG11IxqnZdIdgEO2oawXe9sQ/exec'
+    ''
   );
   const [selectedTab, setSelectedTab] = useState(settings.googleSheetRange?.split('!')[0] || '');
   const [availableTabs, setAvailableTabs] = useState<string[]>([]);
   const [webhookUrlInput, setWebhookUrlInput] = useState(
     settings.googleSheetWebhookUrl ||
-    'https://script.google.com/macros/s/AKfycbyi2tSRCnHp2SV1XTMorD9miR0rV3CN1HPvVgCQeWOxNwDG11IxqnZdIdgEO2oawXe9sQ/exec'
+    ''
   );
+
+  // Full settings load after admin login, so fill any still-empty inputs when they arrive
+  useEffect(() => {
+    if (!webhookUrlInput && settings.googleSheetWebhookUrl) setWebhookUrlInput(settings.googleSheetWebhookUrl);
+    if (!sheetInput && (settings.googleSheetId || settings.googleSheetWebhookUrl)) {
+      setSheetInput(settings.googleSheetId || settings.googleSheetWebhookUrl || '');
+    }
+  }, [settings.googleSheetId, settings.googleSheetWebhookUrl]);
 
   // Live Sync State
   const [loadingSheet, setLoadingSheet] = useState(false);

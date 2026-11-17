@@ -4,7 +4,7 @@ import { INITIAL_PRODUCTS, INITIAL_SETTINGS } from '../data/initialProducts';
 import { UI_TRANSLATIONS } from '../utils/translations';
 import { analytics, trackPageView, trackAddToCart, trackInitiateCheckout } from '../utils/analytics';
 import { resolveImage } from '../utils/resolveImage';
-import { notifyTelegramAddToCart, saveTelegramCredentials } from '../utils/telegram';
+import { notifyTelegramAddToCart, purgeLegacyTelegramSecrets } from '../utils/telegram';
 
 // Helper function to normalize product images and numeric ratings
 const normalizeProducts = (items: Product[]): Product[] => {
@@ -203,20 +203,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const refreshSettings = async () => {
     try {
-      const res = await fetch('/api/settings');
+      // Logged-in admins get the full settings; everyone else only gets the public storefront settings.
+      let res: Response | null = null;
+      if (adminToken) {
+        res = await fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${adminToken}` } });
+        if (res.status === 401 || res.status === 403) {
+          // Admin session expired
+          setAdminToken(null);
+          try { sessionStorage.removeItem('vellure_admin_tok'); } catch {}
+          res = null;
+        }
+      }
+      const isAdminView = !!res && res.ok;
+      if (!res) res = await fetch('/api/settings');
+
       if (res.ok) {
         const data = await res.json();
         if (data.settings) {
           setSettings(data.settings);
-          try {
-            localStorage.setItem('vellure_settings', JSON.stringify(data.settings));
-            if (data.settings.telegramBotToken) {
-              saveTelegramCredentials(data.settings.telegramBotToken, data.settings.telegramChatId || '');
-            }
-          } catch {}
+          // Only the public view may be cached in the browser
+          if (!isAdminView) {
+            try { localStorage.setItem('vellure_settings', JSON.stringify(data.settings)); } catch {}
+          }
         }
       } else {
-        // Fallback from localStorage if server API is unavailable (e.g. static host)
+        // Fallback from localStorage if server API is unavailable
         const saved = localStorage.getItem('vellure_settings');
         if (saved) {
           setSettings(JSON.parse(saved));
@@ -232,10 +243,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
+    purgeLegacyTelegramSecrets();
     refreshProducts();
     refreshCategories();
-    refreshSettings();
   }, []);
+
+  // (Re)load settings on start and whenever the admin logs in or out
+  useEffect(() => {
+    refreshSettings();
+  }, [adminToken]);
 
   // Initialize Meta Pixel & GA4 whenever settings or env updates
   useEffect(() => {

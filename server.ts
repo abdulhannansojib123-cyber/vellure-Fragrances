@@ -9,6 +9,59 @@ import { INITIAL_PRODUCTS } from './src/data/initialProducts.ts';
 dotenv.config();
 
 const app = express();
+
+// Render terminates TLS in front of us: trust exactly one proxy hop so req.ip is the real client IP
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+// Baseline security headers
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  next();
+});
+
+// Keep the admin panel out of search engines
+app.use('/admin', (req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  next();
+});
+
+// ---- Small helpers: HTML escaping + in-memory rate limiting ----
+function escapeHtml(value: unknown, maxLen = 300): string {
+  return String(value ?? '')
+    .slice(0, maxLen)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function rateLimit(max: number, windowMs: number) {
+  const hits = new Map<string, { count: number; resetAt: number }>();
+  return (req: Request, res: Response, next: NextFunction) => {
+    const now = Date.now();
+    if (hits.size > 5000) {
+      for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k);
+    }
+    const key = req.ip || 'unknown';
+    const entry = hits.get(key);
+    if (!entry || entry.resetAt <= now) {
+      hits.set(key, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+    entry.count += 1;
+    if (entry.count > max) {
+      res.setHeader('Retry-After', String(Math.ceil((entry.resetAt - now) / 1000)));
+      return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    }
+    next();
+  };
+}
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'vellure_store.json');
@@ -29,8 +82,14 @@ app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d' }));
 app.use(express.static(path.resolve(process.cwd(), 'public'), { maxAge: '1d' }));
 
 // High capacity body parser for high-resolution images
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Admin write routes (photo uploads etc.) may carry big bodies, but only after the admin token is verified.
+// Everything else is capped at 1 MB so anonymous visitors cannot send huge payloads.
+app.use(['/api/upload', '/api/products', '/api/categories'], (req: Request, res: Response, next: NextFunction) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  return requireAdminAuth(req, res, next);
+}, express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Helper to ensure any base64 image data is automatically decoded and written as a file in /uploads
 function ensureSavedImage(imgStr: string, defaultName: string = 'product'): string {
@@ -299,7 +358,19 @@ function writeData(data: StoreData) {
 }
 
 // In-memory valid admin session tokens
-const validAdminSessions = new Set<string>();
+// token -> expiry timestamp (ms). Sessions last 12 hours and are lost on server restart.
+const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const validAdminSessions = new Map<string, number>();
+
+function isValidAdminSession(token: string): boolean {
+  const expiresAt = validAdminSessions.get(token);
+  if (!expiresAt) return false;
+  if (expiresAt <= Date.now()) {
+    validAdminSessions.delete(token);
+    return false;
+  }
+  return true;
+}
 
 // Middleware to protect admin routes
 function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
@@ -308,7 +379,7 @@ function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: 'Unauthorized. Admin authentication token required.' });
   }
   const token = authHeader.substring(7);
-  if (!validAdminSessions.has(token)) {
+  if (!isValidAdminSession(token)) {
     return res.status(403).json({ error: 'Forbidden. Invalid or expired admin session.' });
   }
   next();
@@ -339,8 +410,10 @@ app.get(['/', '/product/:slug', '/shop', '/combo', '/cart'], (req: Request, res:
       }
     }
 
-    const fullImageUrl = ogImage.startsWith('http') ? ogImage : `${host}${ogImage}`;
-    const fullPageUrl = `${host}${req.originalUrl}`;
+    const fullImageUrl = escapeHtml(ogImage.startsWith('http') ? ogImage : `${host}${ogImage}`, 500);
+    const fullPageUrl = escapeHtml(`${host}${req.originalUrl}`, 500);
+    ogTitle = escapeHtml(ogTitle, 300);
+    ogDesc = escapeHtml(ogDesc, 600);
 
     return res.send(`<!DOCTYPE html>
 <html lang="bn">
@@ -377,7 +450,7 @@ app.get(['/', '/product/:slug', '/shop', '/combo', '/cart'], (req: Request, res:
 // ================= API ROUTES =================
 
 // 1. Admin Authentication
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', rateLimit(8, 15 * 60 * 1000), (req, res) => {
   const { password } = req.body || {};
   const configuredPassword = process.env.ADMIN_PASSWORD;
 
@@ -385,6 +458,11 @@ app.post('/api/admin/login', (req, res) => {
   if (!configuredPassword) {
     console.error('[Admin Login] ADMIN_PASSWORD is not set. Admin login is disabled.');
     return res.status(503).json({ success: false, error: 'Admin login is not configured on the server' });
+  }
+
+  if (configuredPassword.length < 12) {
+    console.error('[Admin Login] ADMIN_PASSWORD is shorter than 12 characters. Admin login is disabled until a stronger password is set.');
+    return res.status(503).json({ success: false, error: 'Admin login is disabled: the server ADMIN_PASSWORD must be at least 12 characters' });
   }
 
   // Constant-time comparison (hash both sides so the buffers are always equal length)
@@ -399,7 +477,7 @@ app.post('/api/admin/login', (req, res) => {
 
   // Generate secure random session token
   const token = 'vlr_' + crypto.randomBytes(32).toString('hex');
-  validAdminSessions.add(token);
+  validAdminSessions.set(token, Date.now() + ADMIN_SESSION_TTL_MS);
 
   return res.json({
     success: true,
@@ -417,7 +495,7 @@ app.get('/api/admin/verify', (req, res) => {
     return res.status(401).json({ valid: false });
   }
   const token = authHeader.substring(7);
-  if (validAdminSessions.has(token)) {
+  if (isValidAdminSession(token)) {
     return res.json({ valid: true, admin: { name: 'VELLURE Master Admin', role: 'superadmin' } });
   }
   return res.status(401).json({ valid: false });
@@ -718,10 +796,18 @@ app.post('/api/upload', requireAdminAuth, (req, res) => {
   }
 });
 
+// Shared secret for the Google Apps Script webhook (set GOOGLE_SHEET_WEBHOOK_SECRET on the server and as
+// the WEBHOOK_SECRET script property in Apps Script). Without it anyone who learns the URL can read or change stock.
+function withWebhookKey(url: string): string {
+  const secret = process.env.GOOGLE_SHEET_WEBHOOK_SECRET;
+  if (!secret) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}key=${encodeURIComponent(secret)}`;
+}
+
 // Helper to deduct stock from Google Sheet (Vellure Fragrances - Inventory)
 async function syncDeductWithGoogleSheet(items: any[], orderRef: string, source: string = 'website') {
   const data = readData();
-  const webhookUrl = data.settings?.googleSheetWebhookUrl || 'https://script.google.com/macros/s/AKfycbyi2tSRCnHp2SV1XTMorD9miR0rV3CN1HPvVgCQeWOxNwDG11IxqnZdIdgEO2oawXe9sQ/exec';
+  const webhookUrl = data.settings?.googleSheetWebhookUrl || process.env.GOOGLE_SHEET_WEBHOOK_URL || '';
   const sheetName = data.settings?.googleSheetName || 'Vellure Fragrances - Inventory';
   const email = data.settings?.googleSheetEmail || 'info.vellurefragrances@gmail.com';
 
@@ -762,7 +848,7 @@ async function syncDeductWithGoogleSheet(items: any[], orderRef: string, source:
     fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ ...payload, secret: process.env.GOOGLE_SHEET_WEBHOOK_SECRET || undefined })
     }).catch(err => {
       console.warn('[Google Sheet Webhook POST Notice]:', err.message);
     });
@@ -771,7 +857,8 @@ async function syncDeductWithGoogleSheet(items: any[], orderRef: string, source:
     for (const it of payload.items) {
       const pName = encodeURIComponent(it.name || it.sku || '');
       const pSize = encodeURIComponent(it.size || '');
-      const getUrl = `${webhookUrl}${webhookUrl.includes('?') ? '&' : '?'}action=deduct&product=${pName}&size=${pSize}&qty=${it.quantity}&order=${encodeURIComponent(orderRef)}`;
+      const keyedUrl = withWebhookKey(webhookUrl);
+      const getUrl = `${keyedUrl}${keyedUrl.includes('?') ? '&' : '?'}action=deduct&product=${pName}&size=${pSize}&qty=${it.quantity}&order=${encodeURIComponent(orderRef)}`;
       fetch(getUrl).catch(() => {});
     }
 
@@ -790,7 +877,7 @@ app.get('/api/orders', requireAdminAuth, (req, res) => {
 });
 
 // Create Order (Public Checkout)
-app.post('/api/orders', (req, res) => {
+app.post('/api/orders', rateLimit(10, 10 * 60 * 1000), (req, res) => {
   const data = readData();
   const {
     customerName,
@@ -880,18 +967,18 @@ app.post('/api/orders', (req, res) => {
   // Send Telegram Notification on new order if enabled
   if (data.settings?.telegramNotifyNewOrder !== false) {
     const itemsList = newOrder.items
-      .map((it: any) => `• <b>${it.name}</b> (${it.size}) × ${it.quantity} — ৳${it.price * it.quantity}`)
+      .map((it: any) => `• <b>${escapeHtml(it.name, 100)}</b> (${escapeHtml(it.size, 20)}) × ${Number(it.quantity) || 1} — ৳${(Number(it.price) || 0) * (Number(it.quantity) || 1)}`)
       .join('\n');
 
     const orderMsg = `🎉 <b>VELLURE — New Order Placed!</b>\n` +
       `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
       `🔖 <b>Order ID:</b> <code>${newOrder.id}</code>\n` +
-      `👤 <b>Customer:</b> ${newOrder.customerName}\n` +
-      `📞 <b>Phone:</b> ${newOrder.phone}\n` +
-      `📍 <b>Address:</b> ${newOrder.address}, ${newOrder.city}${newOrder.area ? ` (${newOrder.area})` : ''}\n` +
+      `👤 <b>Customer:</b> ${escapeHtml(newOrder.customerName, 100)}\n` +
+      `📞 <b>Phone:</b> ${escapeHtml(newOrder.phone, 30)}\n` +
+      `📍 <b>Address:</b> ${escapeHtml(newOrder.address, 300)}, ${escapeHtml(newOrder.city, 60)}${newOrder.area ? ` (${escapeHtml(newOrder.area, 60)})` : ''}\n` +
       `💳 <b>Payment:</b> ${newOrder.paymentMethod.toUpperCase()} (${newOrder.paymentStatus})\n` +
       `💵 <b>Total Amount:</b> ৳${newOrder.totalAmount}\n` +
-      (newOrder.deliveryNote ? `📝 <b>Note:</b> ${newOrder.deliveryNote}\n` : '') +
+      (newOrder.deliveryNote ? `📝 <b>Note:</b> ${escapeHtml(newOrder.deliveryNote, 300)}\n` : '') +
       `📦 <b>Items:</b>\n${itemsList}\n` +
       `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
       `🚚 <i>Dispatched to VELLURE atelier dispatch queue.</i>`;
@@ -938,20 +1025,25 @@ app.put('/api/orders/:id/status', requireAdminAuth, (req, res) => {
 });
 
 // Track Order (Public by ID and Phone verification)
-app.get('/api/orders/track', (req, res) => {
+app.get('/api/orders/track', rateLimit(30, 10 * 60 * 1000), (req, res) => {
   const { orderId, phone } = req.query;
   if (!orderId || !phone) {
     return res.status(400).json({ error: 'Both Order Number and Phone Number are required to track.' });
   }
 
-  const cleanPhone = (phone as string).replace(/[^0-9]/g, '');
-  const cleanOrderId = (orderId as string).trim().toUpperCase();
+  const cleanPhone = String(phone).replace(/[^0-9]/g, '');
+  const cleanOrderId = String(orderId).trim().toUpperCase();
+
+  // Require a full phone number (not a 1-digit suffix) so order details can't be guessed from sequential order IDs
+  if (cleanPhone.length < 10) {
+    return res.status(404).json({ error: 'No matching order found. Please verify your Order Number (e.g. VLR-2026-000101) and Phone Number.' });
+  }
 
   const data = readData();
   const order = data.orders.find(o => {
     const oIdMatch = o.id.toUpperCase() === cleanOrderId;
     const oPhoneClean = o.phone.replace(/[^0-9]/g, '');
-    const phoneMatch = oPhoneClean.endsWith(cleanPhone) || cleanPhone.endsWith(oPhoneClean);
+    const phoneMatch = oPhoneClean.slice(-10) === cleanPhone.slice(-10);
     return oIdMatch && phoneMatch;
   });
 
@@ -964,7 +1056,7 @@ app.get('/api/orders/track', (req, res) => {
 
 // 3b. Google Sheets Inventory Synchronization & Stock Management API
 // GET sync status and current inventory
-app.get('/api/inventory/sheet-sync', (req, res) => {
+app.get('/api/inventory/sheet-sync', requireAdminAuth, (req, res) => {
   const data = readData();
   const settings = data.settings || {};
 
@@ -1115,13 +1207,13 @@ function parseAndApplySheetRows(rows: any[], data: StoreData): { updatedCount: n
 // Global live sync runner for Google Sheet Web App
 async function syncFromGoogleSheetWebhook(targetUrl?: string) {
   const data = readData();
-  const webhook = targetUrl || data.settings?.googleSheetWebhookUrl || 'https://script.google.com/macros/s/AKfycbyi2tSRCnHp2SV1XTMorD9miR0rV3CN1HPvVgCQeWOxNwDG11IxqnZdIdgEO2oawXe9sQ/exec';
+  const webhook = targetUrl || data.settings?.googleSheetWebhookUrl || process.env.GOOGLE_SHEET_WEBHOOK_URL || '';
 
   if (!webhook) {
     throw new Error('No Google Sheet Webhook URL configured');
   }
 
-  const res = await fetch(webhook);
+  const res = await fetch(withWebhookKey(webhook));
   const fetchedJson = await res.json().catch(() => null);
 
   const itemsList = Array.isArray(fetchedJson)
@@ -1275,7 +1367,7 @@ app.get('/api/coupons', requireAdminAuth, (req, res) => {
   res.json({ coupons: data.coupons });
 });
 
-app.post('/api/coupons/validate', (req, res) => {
+app.post('/api/coupons/validate', rateLimit(30, 10 * 60 * 1000), (req, res) => {
   const { code, subtotal } = req.body;
   if (!code) {
     return res.status(400).json({ valid: false, message: 'Please enter a coupon code' });
@@ -1336,16 +1428,50 @@ app.post('/api/coupons', requireAdminAuth, (req, res) => {
 });
 
 // 5. Settings API
+// Settings keys that must never be sent to the public site (bot tokens, sheet webhook, ids, anything secret-looking)
+const PRIVATE_SETTING_KEY = /^(telegram|googleSheet)|token|secret|password|webhook|apikey/i;
+
+function publicSettingsView(settings: Record<string, any> = {}) {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(settings)) {
+    if (!PRIVATE_SETTING_KEY.test(k)) out[k] = v;
+  }
+  return out;
+}
+
+const MASK = '••••••';
+function adminSettingsView(settings: Record<string, any> = {}) {
+  const view: Record<string, any> = { ...settings };
+  const token = String(settings.telegramBotToken || process.env.TELEGRAM_BOT_TOKEN || '');
+  // The bot token is write-only: the admin UI only ever sees a masked hint of it
+  view.telegramBotToken = token ? MASK + token.slice(-4) : '';
+  view.telegramBotTokenSet = !!token;
+  return view;
+}
+
+// Public: only non-sensitive storefront settings (contact info, delivery fees, announcement, analytics IDs)
 app.get('/api/settings', (req, res) => {
   const data = readData();
-  res.json({ settings: data.settings });
+  res.json({ settings: publicSettingsView(data.settings) });
+});
+
+// Admin only: full settings (bot token masked)
+app.get('/api/admin/settings', requireAdminAuth, (req, res) => {
+  const data = readData();
+  res.json({ settings: adminSettingsView(data.settings) });
 });
 
 app.put('/api/settings', requireAdminAuth, (req, res) => {
   const data = readData();
-  data.settings = { ...data.settings, ...req.body };
+  const incoming = { ...(req.body || {}) };
+  delete incoming.telegramBotTokenSet;
+  // Keep the stored bot token unless the admin typed a brand-new one (masked placeholder = unchanged)
+  if (typeof incoming.telegramBotToken !== 'string' || !incoming.telegramBotToken.trim() || incoming.telegramBotToken.startsWith(MASK)) {
+    delete incoming.telegramBotToken;
+  }
+  data.settings = { ...data.settings, ...incoming };
   writeData(data);
-  res.json({ success: true, settings: data.settings });
+  res.json({ success: true, settings: adminSettingsView(data.settings) });
 });
 
 // Telegram Notification Dispatcher
@@ -1381,23 +1507,23 @@ async function sendTelegramMessage(text: string, customToken?: string, customCha
 
 // 6. Telegram Notifications API
 // Add to Cart Telegram Notification
-app.post('/api/notifications/telegram/add-to-cart', async (req, res) => {
+app.post('/api/notifications/telegram/add-to-cart', rateLimit(20, 10 * 60 * 1000), async (req, res) => {
   const data = readData();
   if (data.settings?.telegramNotifyAddToCart === false) {
     return res.json({ success: false, disabled: true, message: 'Add to cart Telegram alerts disabled in settings' });
   }
 
-  const { productName, productNameBn, size, price, quantity, cartSubtotal, language } = req.body;
+  const { productName, productNameBn, size, price, quantity, cartSubtotal, language } = req.body || {};
   const now = new Date();
   const timeStr = now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   const message = `🛍️ <b>VELLURE — Customer Added Item to Cart!</b>\n` +
     `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `✨ <b>Fragrance:</b> ${productName || 'Attar'} ${productNameBn ? `(${productNameBn})` : ''}\n` +
-    `💎 <b>Size:</b> ${size || '3ml'}\n` +
-    `🔢 <b>Quantity:</b> ${quantity || 1}\n` +
-    `💰 <b>Price:</b> ৳${price || 0}\n` +
-    `🛒 <b>Cart Subtotal:</b> ৳${cartSubtotal || price || 0}\n` +
+    `✨ <b>Fragrance:</b> ${escapeHtml(productName || 'Attar', 100)} ${productNameBn ? `(${escapeHtml(productNameBn, 100)})` : ''}\n` +
+    `💎 <b>Size:</b> ${escapeHtml(size || '3ml', 20)}\n` +
+    `🔢 <b>Quantity:</b> ${Number(quantity) || 1}\n` +
+    `💰 <b>Price:</b> ৳${Number(price) || 0}\n` +
+    `🛒 <b>Cart Subtotal:</b> ৳${Number(cartSubtotal) || Number(price) || 0}\n` +
     `🕒 <b>Time:</b> ${timeStr}\n` +
     `🌐 <b>Language:</b> ${language === 'bn' ? 'বাংলা' : 'English'}\n` +
     `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
@@ -1408,8 +1534,11 @@ app.post('/api/notifications/telegram/add-to-cart', async (req, res) => {
 });
 
 // Test Telegram Bot Connection
-app.post('/api/notifications/telegram/test', async (req, res) => {
-  const { botToken, chatId } = req.body;
+app.post('/api/notifications/telegram/test', requireAdminAuth, async (req, res) => {
+  const body = req.body || {};
+  // A masked placeholder from the admin UI means "use the stored token"
+  const botToken = typeof body.botToken === 'string' && !body.botToken.startsWith(MASK) && body.botToken.trim() ? body.botToken.trim() : undefined;
+  const chatId = typeof body.chatId === 'string' && body.chatId.trim() ? body.chatId.trim() : undefined;
   const now = new Date();
   const timeStr = now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
