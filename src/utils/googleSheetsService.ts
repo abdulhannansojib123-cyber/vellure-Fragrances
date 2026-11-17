@@ -369,10 +369,26 @@ export function generateGoogleAppsScript(siteUrl: string = window.location.origi
  * 5. Select type: "Web app".
  * 6. Set "Execute as": "Me".
  * 7. Set "Who has access": "Anyone".
- * 8. Click "Deploy", copy the Web App URL, and paste it into your VELLURE Admin Settings!
+ * 8. BEFORE deploying: Project Settings > Script properties > add WEBHOOK_SECRET = a long random string,
+ *    and set the same value as GOOGLE_SHEET_WEBHOOK_SECRET on your server.
+ * 9. Click "Deploy", copy the Web App URL, and paste it into your VELLURE Admin Settings!
  */
 
+// Shared secret check: set a script property named WEBHOOK_SECRET (Project Settings > Script properties)
+// to the same value as GOOGLE_SHEET_WEBHOOK_SECRET on your server. Requests without it are rejected.
+function isAuthorized_(provided) {
+  var secret = PropertiesService.getScriptProperties().getProperty('WEBHOOK_SECRET');
+  return !!secret && String(provided || '') === secret;
+}
+
+function json_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
 function doGet(e) {
+  if (!isAuthorized_(e && e.parameter && e.parameter.key)) {
+    return json_({ error: 'unauthorized' });
+  }
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = sheet.getDataRange().getValues();
   if (data.length < 2) {
@@ -407,6 +423,9 @@ function doGet(e) {
 function doPost(e) {
   try {
     var payload = JSON.parse(e.postData.contents);
+    if (!isAuthorized_(payload.secret)) {
+      return json_({ success: false, error: 'unauthorized' });
+    }
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var data = sheet.getDataRange().getValues();
     var headers = data[0].map(function(h) { return String(h).trim().toLowerCase(); });

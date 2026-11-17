@@ -1414,7 +1414,7 @@ export const INITIAL_SETTINGS: SiteSettings = {
   googleSheetId: "1C7BUzrO8G65qZKLrMgQfH6Okinv57gXdbCov2PjTaIA",
   googleSheetName: "Vellure Fragrances - Inventory",
   googleSheetEmail: "info.vellurefragrances@gmail.com",
-  googleSheetWebhookUrl: "https://script.google.com/macros/s/AKfycbyi2tSRCnHp2SV1XTMorD9miR0rV3CN1HPvVgCQeWOxNwDG11IxqnZdIdgEO2oawXe9sQ/exec",
+  googleSheetWebhookUrl: "",
   googleSheetRange: "Vellure Fragrances - Inventory!A2:E",
   googleSheetLastSync: "2026-10-18T08:46:12.119Z",
   googleSheetSyncStatus: "connected",
